@@ -4,6 +4,9 @@ import time
 import pendulum
 from hashlib import md5
 from fake_useragent import UserAgent
+#pip3 install pycryptodome
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
 
 session = requests.session()
 ua = UserAgent()
@@ -22,13 +25,13 @@ def get_proxy():
         }
 
 
-def getToken(username: str, password: str, login_type: str = "android"):
-    url = "https://api.moguding.net:9000/session/user/v1/login"
+def getToken(username: str, password: str, login_type: str = "android", t: str = str(int(time.time()*1000))):
+    url = "https://api.moguding.net:9000/session/user/v3/login"
     data = {
-        "password": password,
-        "phone": username,
+        "password": encrypt("23DbtQHR2UMbH6mJ", password),
+        "phone": encrypt("23DbtQHR2UMbH6mJ", username),
         "loginType": login_type,
-        "uuid": ""
+        "t": encrypt("23DbtQHR2UMbH6mJ", t)
     }
     headers = {
         "content-type": "application/json; charset=UTF-8",
@@ -39,8 +42,18 @@ def getToken(username: str, password: str, login_type: str = "android"):
         print(res.json()["msg"])
         exit()
     else:
-        sign = get_sign(text=res.json()["data"]["userId"] + res.json()["data"]["userType"])
+        sign = get_sign(
+            text=res.json()["data"]["userId"] + res.json()["data"]["userType"])
         return res.json()["data"]["token"], sign, res.json()["data"]["userId"]
+
+
+def encrypt(key, text):
+    aes = AES.new(key.encode("utf-8"), AES.MODE_ECB)
+    pad_pkcs7 = pad(text.encode('utf-8'), AES.block_size, style='pkcs7')
+    # 加密函数,使用pkcs7补全
+    res = aes.encrypt(pad_pkcs7)
+    msg = res.hex()
+    return msg
 
 
 def get_sign(text: str):
@@ -64,10 +77,10 @@ def get_plan_id(token: str, sign: str):
     return res.json()["data"][0]["planId"]
 
 
-def save(user_id: str, authorization: str, plan_id: str, country: str, province: str,
+def save(user_id: str, authorization: str, plan_id: str, country: str, province: str, city: str,
          address: str, save_type: str = "START", description: str = "",
          device: str = "Android", latitude: str = None, longitude: str = None):
-    text = device + save_type + plan_id + user_id + f"{country}{province}{address}"
+    text = device + save_type + plan_id + user_id + address
     headers = {
         'roleKey': 'student',
         "user-agent": ua.chrome,
@@ -77,9 +90,9 @@ def save(user_id: str, authorization: str, plan_id: str, country: str, province:
     }
     data = {
         "country": country,
-        "address": f"{country}{province}{address}",
+        "address": address,
         "province": province,
-        "city": province,
+        "city": city,
         "latitude": latitude,
         "description": description,
         "planId": plan_id,
@@ -95,15 +108,16 @@ def save(user_id: str, authorization: str, plan_id: str, country: str, province:
         print("出错了：\n" + res.json() + "\n")
 
 
-def main(phone = "",
-    pwd = "",
-    logintype = "android",
-    country = "中国",
-    province = "",
-    address = "",
-    description = "",
-    latitude = "",
-    longitude = ""):
+def main(phone="",
+         pwd="",
+         logintype="android",
+         country="中国",
+         province="",
+         city="",
+         address="",
+         description="",
+         latitude="",
+         longitude=""):
     print(pendulum.now().to_datetime_string() + " 账号：" + phone + " 开始打卡...\n")
     if int(pendulum.now().to_time_string()[:2]) <= 9:
         save_type = "START"
@@ -111,30 +125,32 @@ def main(phone = "",
         save_type = "END"
     try:
         session.proxies.update(get_proxy())
-        auth_token, sign_value, user_id = getToken(username=phone, password=pwd, login_type=logintype)
+        auth_token, sign_value, user_id = getToken(
+            username=phone, password=pwd, login_type=logintype)
         plan_id = get_plan_id(token=auth_token, sign=sign_value)
-        save(user_id=user_id, authorization=auth_token, plan_id=plan_id, country=country, province=province,
-            address=address, save_type=save_type, description=description,
-            device=logintype.capitalize(), latitude=latitude, longitude=longitude)
+        save(user_id=user_id, authorization=auth_token, plan_id=plan_id, country=country, province=province, city=city,
+             address=address, save_type=save_type, description=description,
+             device=logintype.capitalize(), latitude=latitude, longitude=longitude)
     except:
-        auth_token, sign_value, user_id = getToken(username=phone, password=pwd, login_type=logintype)
+        auth_token, sign_value, user_id = getToken(
+            username=phone, password=pwd, login_type=logintype)
         plan_id = get_plan_id(token=auth_token, sign=sign_value)
-        save(user_id=user_id, authorization=auth_token, plan_id=plan_id, country=country, province=province,
-            address=address, save_type=save_type, description=description,
-            device=logintype.capitalize(), latitude=latitude, longitude=longitude)
+        save(user_id=user_id, authorization=auth_token, plan_id=plan_id, country=country, province=province, city=city,
+             address=address, save_type=save_type, description=description,
+             device=logintype.capitalize(), latitude=latitude, longitude=longitude)
 
 
 if __name__ == "__main__":
     time.sleep(1)
     main(
-        phone = "",  # 账号/手机号
-        pwd = "",  # 密码
-        logintype = "android",  # 打卡设备类型
-        country = "中国",  # 国家
-        province = "",  # 省市
-        address = "",  # 详细地址，没有市
-        description = "",  # 打卡描述
-        latitude = "",  # 纬度
-        longitude = ""  # 经度
+        phone="",  # 账号/手机号
+        pwd="",  # 密码
+        logintype="android",  # 打卡设备类型
+        country="中国",  # 国家
+        province="",  # 省
+        city="",  # 市
+        address="",  # 详细地址，打卡页面输出显示
+        description="",  # 打卡描述
+        latitude="",  # 纬度
+        longitude=""  # 经度
     )
-
