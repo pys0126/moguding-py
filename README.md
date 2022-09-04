@@ -19,6 +19,3 @@
 00 下班时间 * * * python3 脚本存放路径 >> 日志存放路径
 ```
 ![image](https://user-images.githubusercontent.com/47041406/182873546-f23ab078-3343-4b02-84bf-84278831f26c.png)
-
-- 方式二：
-加我QQ，帮你解放双手：`2493919891`
