@@ -1,15 +1,49 @@
+import urllib.parse
+import hashlib
+import hmac
 import requests
 import json
 import time
 import pendulum
 from hashlib import md5
 from fake_useragent import UserAgent
-#pip3 install pycryptodome
+import base64
+# pip3 install pycryptodome
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
-
+import binascii
 session = requests.session()
 ua = UserAgent()
+
+
+def send_dingding(text: str, webhook: str, key: str):
+    sign_data = send_sign(key)
+    webhook = f'{webhook}&sign={sign_data["sign"]}&timestamp={sign_data["timestamp"]}'
+    headers = {'Content-Type': 'application/json'}
+    data = {
+        "msgtype": "text",
+        "text": {
+            "content": text
+        },
+    }
+    r = requests.post(webhook, headers=headers, data=json.dumps(data))
+    print(r.text)
+
+
+def send_sign(key: str):
+    timestamp = str(round(time.time() * 1000))
+    secret = key
+    secret_enc = secret.encode('utf-8')
+    string_to_sign = '{}\n{}'.format(timestamp, secret)
+    string_to_sign_enc = string_to_sign.encode('utf-8')
+    hmac_code = hmac.new(secret_enc, string_to_sign_enc,
+                         digestmod=hashlib.sha256).digest()
+    sign = urllib.parse.quote_plus(base64.b64encode(hmac_code))
+    sign_data = {
+        'sign': sign,
+        'timestamp': timestamp,
+    }
+    return (sign_data)
 
 
 def get_proxy():
@@ -104,6 +138,7 @@ def save(user_id: str, authorization: str, plan_id: str, country: str, province:
     res = session.post(url=url, headers=headers, data=json.dumps(data))
     if res.json()["code"] == 200:
         print("打卡成功！\n")
+        #send_dingding('打卡成功！\n' + res.text, 'webhook', '加签')#钉钉推送，不需要就注释掉
     else:
         print("出错了：\n" + res.json() + "\n")
 
