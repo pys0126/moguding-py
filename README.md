@@ -19,3 +19,5 @@
 00 下班时间 * * * python3 脚本存放路径 >> 日志存放路径
 ```
 ![image](https://user-images.githubusercontent.com/47041406/182873546-f23ab078-3343-4b02-84bf-84278831f26c.png)
+## 钉钉推送
+填写钉钉机器人webhook信息并取消注释即可
