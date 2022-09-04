@@ -23,10 +23,11 @@ def get_proxy():
 
 
 def getToken(username: str, password: str, login_type: str = "android"):
-    url = "https://api.moguding.net:9000/session/user/v1/login"
+    url = "https://api.moguding.net:9000/session/user/v2/login"
     data = {
         "password": password,
         "phone": username,
+        "t": "",
         "loginType": login_type,
         "uuid": ""
     }
