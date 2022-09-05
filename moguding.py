@@ -3,6 +3,8 @@ import json
 import time
 import pendulum
 from hashlib import md5
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
 from fake_useragent import UserAgent
 
 session = requests.session()
@@ -20,14 +22,21 @@ def get_proxy():
         return {
             "http": "http://" + res_json["proxy"]
         }
+    
+def encrypt(key, text):
+    aes = AES.new(key.encode("utf-8"), AES.MODE_ECB)
+    pad_pkcs7 = pad(text.encode('utf-8'), AES.block_size, style='pkcs7')
+    res = aes.encrypt(pad_pkcs7)
+    msg = res.hex()
+    return msg
 
-
-def getToken(username: str, password: str, login_type: str = "android"):
-    url = "https://api.moguding.net:9000/session/user/v2/login"
+def get_token(username: str, password: str, login_type: str = "android"):
+    url = "https://api.moguding.net:9000/session/user/v3/login"
+    t = str(int(time.time() * 1000))
     data = {
-        "password": password,
-        "phone": username,
-        "t": "",
+        "password": encrypt("23DbtQHR2UMbH6mJ", password),
+        "phone": encrypt("23DbtQHR2UMbH6mJ", username),
+        "t": encrypt("23DbtQHR2UMbH6mJ", t),
         "loginType": login_type,
         "uuid": ""
     }
@@ -112,13 +121,13 @@ def main(phone = "",
         save_type = "END"
     try:
         session.proxies.update(get_proxy())
-        auth_token, sign_value, user_id = getToken(username=phone, password=pwd, login_type=logintype)
+        auth_token, sign_value, user_id = get_token(username=phone, password=pwd, login_type=logintype)
         plan_id = get_plan_id(token=auth_token, sign=sign_value)
         save(user_id=user_id, authorization=auth_token, plan_id=plan_id, country=country, province=province,
             address=address, save_type=save_type, description=description,
             device=logintype.capitalize(), latitude=latitude, longitude=longitude)
     except:
-        auth_token, sign_value, user_id = getToken(username=phone, password=pwd, login_type=logintype)
+        auth_token, sign_value, user_id = get_token(username=phone, password=pwd, login_type=logintype)
         plan_id = get_plan_id(token=auth_token, sign=sign_value)
         save(user_id=user_id, authorization=auth_token, plan_id=plan_id, country=country, province=province,
             address=address, save_type=save_type, description=description,
